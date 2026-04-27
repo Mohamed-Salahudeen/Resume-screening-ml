@@ -4,13 +4,11 @@ import re
 import string
 import nltk
 from io import BytesIO
-
 # File Processing
 import PyPDF2
 from docx import Document
 from PIL import Image
 import pytesseract
-
 # ML & NLP
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -18,26 +16,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 # =================================================================================
 # 1. SETUP AND CONFIGURATION
 # =================================================================================
-
-# FIX: Explicitly download the required NLTK data packages first.
-# This prevents the AttributeError by ensuring the data is available and not corrupted.
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
-
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
+# FIX: Force-download NLTK data. This is more reliable for deployment.
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 stop_words = set(nltk.corpus.stopwords.words('english'))
+
 
 # =================================================================================
 # 2. HELPER FUNCTIONS (BACKEND LOGIC)
 # =================================================================================
-
-
 # --- Text Extraction Functions ---
 def extract_text_from_pdf(file):
     try:
@@ -84,13 +72,10 @@ def extract_contact_info(text):
     # More robust regex for names (looks for 2-3 capitalized words)
     name_pattern = r'([A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2})'
     name = re.search(name_pattern, text)
-    
     email = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text)
-    
     # More flexible phone regex
     phone_pattern = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
     phone = re.search(phone_pattern, text)
-    
     return (
         name.group(0).strip() if name else "Not Found",
         email.group(0) if email else "Not Found",
@@ -143,7 +128,8 @@ csv_column_map = {}
 if csv_files:
     st.info("CSV file detected. Please map the column containing resume text.")
     try:
-        df_sample = pd.read_csv(csv_files[0])
+        # Use a BytesIO object to read the sample in memory
+        df_sample = pd.read_csv(BytesIO(csv_files[0].getvalue()))
         resume_text_col = st.selectbox(
             "**Which column in your CSV contains the resume text?**",
             options=df_sample.columns.tolist()
@@ -169,6 +155,7 @@ if st.button("Shortlist Candidates", type="primary", use_container_width=True):
             for file in uploaded_files:
                 filename = file.name
                 file_content = BytesIO(file.getvalue())  # Use BytesIO for universal handling
+                
                 if filename.endswith('.pdf'):
                     text = extract_text_from_pdf(file_content)
                     all_resumes_data.append({'source': filename, 'text': text})
@@ -240,3 +227,6 @@ if st.button("Shortlist Candidates", type="primary", use_container_width=True):
                             st.text(result['Resume Text'])
             else:
                 st.warning(f"No valid resumes found to display after filtering. {suspicious_count} entries were removed from a total of {len(all_resumes_data)}.")
+
+st.markdown("---")
+st.markdown("© 2025 All Rights reserved , Developed by Mohamed Salahudeen H")
